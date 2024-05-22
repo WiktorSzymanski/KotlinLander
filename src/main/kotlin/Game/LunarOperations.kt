@@ -26,13 +26,13 @@ val printSurface: (Map<Double, Double>) -> Unit = { coords ->
     }
 }
 
-val isPointBetween: (List<Pair<Double, Double>>, Pair<Double, Double>) -> Boolean = {
+val collision: (List<Pair<Double, Double>>, Pair<Double, Double>) -> Boolean = {
     line, point ->
     val lineDistance = sqrt((line[0].first - line[1].first).pow(2.0) + (line[0].second - line[1].second).pow(2.0))
     val pointFirstDistance = sqrt((line[0].first - point.first).pow(2.0) + (line[0].second - point.second).pow(2.0))
     val pointSecondDistance = sqrt((line[1].first - point.first).pow(2.0) + (line[1].second - point.second).pow(2.0))
 
-    abs(pointFirstDistance + pointSecondDistance - lineDistance) < 0.01
+    abs(pointFirstDistance + pointSecondDistance - lineDistance) < 0.01 || ( line[0].first > point.first && line[1].first > point.first )
 }
 
 fun List<Pair<Double, Double>>.findNearestCoords(point: Pair<Double, Double>): List<Pair<Double, Double>> {

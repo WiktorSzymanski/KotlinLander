@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.flow.Flow
@@ -38,22 +40,24 @@ class Game {
     private val lunar = Lunar(generateSurface(), 1737000.0, 7.34767309 * 10.0.pow(22))
     private var time = 1
     private var gravitationalAcceleration: Double = 0.0
+    var engineTime = 0.0
     private val mutableState = MutableStateFlow(Pair(
         Lander(position = Pair(100.0, 50.0), rotation = 0.0, enginePower = 3500.0, mass = 14900.0, velocity = Pair(0.01, 0.0)),
-        lunar.plane)) // Maybe just the nearest points?
+        Pair(lunar.plane, engineTime))) // Maybe just the nearest points?
 
-    val state: Flow<Pair<Lander, List<Pair<Double, Double>>>> = mutableState
+    val state: Flow<Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>> = mutableState
 
     var rotationToApply: Double = 0.0
-    var engineTime = 0.0
+
 
     init {
         coroutineScope.launch {
             while (true) {
                 delay(10)
-                if (isPointBetween(
-                        mutableState.value.second.findNearestCoords(mutableState.value.first.position),
-                        mutableState.value.first.position)) break;
+                if (collision(
+                        mutableState.value.second.first.findNearestCoords(mutableState.value.first.position),
+                        mutableState.value.first.position)
+                ) break;
 
                 gravitationalAcceleration = gravitationalAcceleration(lunar.mass, lunar.radius, mutableState.value.first.position.first)
                 val newVelocity = calcNewVelocity(mutableState.value.first, engineTime, gravitationalAcceleration)
@@ -66,10 +70,11 @@ class Game {
                             ),
                             rotation = it.first.rotation + rotationToApply,
                             velocity = newVelocity),
-                        it.second)
+                        Pair(
+                            it.second.first,
+                            engineTime
+                        ))
                 }
-                engineTime = 0.0
-                rotationToApply = 0.0
             }
         }
     }
@@ -87,7 +92,7 @@ fun KtLander(game: Game) {
 }
 
 @Composable
-fun Board(state: Pair<Lander, List<Pair<Double, Double>>>) {
+fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
     Canvas(Modifier.fillMaxSize()) {
 
         scale(20f, -20f) {
@@ -104,9 +109,18 @@ fun Board(state: Pair<Lander, List<Pair<Double, Double>>>) {
                             y = state.first.position.second.toFloat()
                         )
                     )
+                    if (state.second.second > 0.0) {
+                        drawCircle(
+                            color = Color.Magenta,
+                            radius = 0.2f,
+                            center = Offset(
+                                x = state.first.position.first.toFloat() + 0.25f,
+                                y = state.first.position.second.toFloat() + 0.0f)
+                        )
+                    }
                 }
 
-                state.second.zipWithNext { a, b ->
+                state.second.first.zipWithNext { a, b ->
                     drawLine(
                         color = Color.Black,
                         start = Offset(a.first.toFloat(), a.second.toFloat()),
@@ -124,15 +138,36 @@ fun main() = application {
         onKeyEvent = {
             when (it.key) {
                 Key.A -> {
-                    game.rotationToApply = -10.0
+                    when (it.type) {
+                        KeyEventType.KeyDown -> {
+                            game.rotationToApply = -1.0
+                        }
+                        KeyEventType.KeyUp -> {
+                            game.rotationToApply = 0.0
+                        }
+                    }
                     true
                 }
                 Key.D -> {
-                    game.rotationToApply = 10.0
+                    when (it.type) {
+                        KeyEventType.KeyDown -> {
+                            game.rotationToApply = 1.0
+                        }
+                        KeyEventType.KeyUp -> {
+                            game.rotationToApply = 0.0
+                        }
+                    }
                     true
                 }
                 Key.W -> {
-                    game.engineTime = 0.01
+                    when (it.type) {
+                        KeyEventType.KeyDown -> {
+                            game.engineTime = 0.005
+                        }
+                        KeyEventType.KeyUp -> {
+                            game.engineTime = 0.0
+                        }
+                    }
                     true
                 }
                 else -> {
