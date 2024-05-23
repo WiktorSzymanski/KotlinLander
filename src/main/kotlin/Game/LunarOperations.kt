@@ -1,9 +1,6 @@
 package Game
 
 import java.io.File
-import kotlin.math.abs
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 val generateSurface: () -> List<Pair<Double, Double>> = {
     val cords = mutableListOf<Pair<Double, Double>>()
@@ -11,9 +8,9 @@ val generateSurface: () -> List<Pair<Double, Double>> = {
     var i = 0.0
     while (i < 100.0) {
         val num = gen.perlin(i, .5,16)
-        cords.add(Pair(i*10, num*10))
+        cords.add(Pair(i*10, num*10+10))
         i += ((1..2).random()).toDouble()/10
-        cords.add(Pair(i*10, num*10))
+        cords.add(Pair(i*10, num*10+10))
         i += 0.1
     }
     cords
@@ -41,6 +38,9 @@ val pointsToFunction: (Pair<Double, Double>, Pair<Double, Double>) -> (Double) -
 }
 
 fun List<Pair<Double, Double>>.findNearestCoords(point: Pair<Double, Double>): List<Pair<Double, Double>> {
+    if (point.first < 0) {
+        return listOf(this.last(), this.last())
+    }
     var left = 0
     var right = this.size - 1
     while (left <= right) {

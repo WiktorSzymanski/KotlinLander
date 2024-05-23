@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -23,6 +24,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.*
 import androidx.compose.ui.graphics.drawscope.*
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
 import kotlin.math.pow
 
 @Composable
@@ -40,8 +45,9 @@ class Game {
     private var time = 1
     private var gravitationalAcceleration: Double = 0.0
     var engineTime = 0.0
+    private val maxX = lunar.plane.last().first
     private val mutableState = MutableStateFlow(Pair(
-        Lander(position = Pair(100.0, 50.0), rotation = 0.0, enginePower = 3500.0, mass = 14900.0, velocity = Pair(0.01, 0.0)),
+        Lander(position = Pair(100.0, 100.0), rotation = 0.0, enginePower = 3500.0, mass = 14900.0, velocity = Pair(0.01, 0.0)),
         Pair(lunar.plane, engineTime))) // Maybe just the nearest points?
 
     val state: Flow<Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>> = mutableState
@@ -52,7 +58,7 @@ class Game {
     init {
         coroutineScope.launch {
             while (true) {
-                delay(10)
+                delay(20)
                 if (collision(
                         mutableState.value.second.first.findNearestCoords(mutableState.value.first.position),
                         mutableState.value.first.position)
@@ -62,13 +68,19 @@ class Game {
                     break
                 };
 
-                gravitationalAcceleration = gravitationalAcceleration(lunar.mass, lunar.radius, mutableState.value.first.position.first)
+//                gravitationalAcceleration = gravitationalAcceleration(lunar.mass, lunar.radius, mutableState.value.first.position.second)
+                gravitationalAcceleration = -0.00167
+                println(gravitationalAcceleration)
                 val newVelocity = calcNewVelocity(mutableState.value.first, engineTime, gravitationalAcceleration)
+                var newXPosition = (mutableState.value.first.position.first + (newVelocity.first * time)) % maxX
+                if (newXPosition < 0) {
+                    newXPosition += maxX
+                }
                 mutableState.update {
                     Pair(
                         it.first.copy(
                             position = Pair(
-                                it.first.position.first + (newVelocity.first * time),
+                                newXPosition,
                                 it.first.position.second + (newVelocity.second * time)
                             ),
                             rotation = (it.first.rotation + rotationToApply) % 360.0,
@@ -94,22 +106,40 @@ fun KtLander(game: Game) {
     }
 }
 
+@Preview
 @Composable
 fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
+    val textMeasurer = rememberTextMeasurer()
+    val textVelocityX = "vx: %.2f".format(state.first.velocity.first)
+    val textVelocityY = "vx: %.2f".format(state.first.velocity.second)
+
+    val style = TextStyle(
+        fontSize = 16.sp,
+        color = Color.White
+    )
+
+    val textLayoutVX = remember(textVelocityX, style) {
+        textMeasurer.measure(textVelocityX, style)
+    }
+
+    val textLayoutVY = remember(textVelocityY, style) {
+        textMeasurer.measure(textVelocityY, style)
+    }
+
     Canvas(Modifier.fillMaxSize().background(Color.hsl(237F, 1F, 0.08F))) {
-//        drawCircle(
-//            radius = 10f,
-//            brush = Brush.linearGradient(
-//                colors = listOf(Color.Transparent, Color.Cyan),
-//                start = center + Offset(0f, 25f),
-//                end = center + Offset(0f, 10f),
-//                tileMode = TileMode.Decal
-//            ),
-//            center = center + Offset(0f, 20f),
-//        )
         val landerOffset = Offset(
             x = state.first.position.first.toFloat(),
             y = state.first.position.second.toFloat())
+
+        drawText(
+            topLeft = Offset(size.width - 100f, 10f),
+            textLayoutResult = textLayoutVX
+        )
+
+        drawText(
+            topLeft = Offset(size.width - 100f, 30f),
+            textLayoutResult = textLayoutVY
+        )
 
         scale(20f, -20f) {
             translate(left = size.width/2 - state.first.position.first.toFloat(), top = size.height/2 - state.first.position.second.toFloat()) {
@@ -224,7 +254,7 @@ fun main() = application {
                 Key.W -> {
                     when (it.type) {
                         KeyEventType.KeyDown -> {
-                            game.engineTime = 0.005
+                            game.engineTime = 0.05
                         }
                         KeyEventType.KeyUp -> {
                             game.engineTime = 0.0
