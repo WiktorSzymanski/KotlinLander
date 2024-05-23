@@ -11,12 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -27,6 +22,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.*
+import androidx.compose.ui.graphics.drawscope.*
 import kotlin.math.pow
 
 @Composable
@@ -75,7 +71,7 @@ class Game {
                                 it.first.position.first + (newVelocity.first * time),
                                 it.first.position.second + (newVelocity.second * time)
                             ),
-                            rotation = it.first.rotation + rotationToApply,
+                            rotation = (it.first.rotation + rotationToApply) % 360.0,
                             velocity = newVelocity),
                         Pair(
                             it.second.first,
@@ -101,11 +97,25 @@ fun KtLander(game: Game) {
 @Composable
 fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
     Canvas(Modifier.fillMaxSize().background(Color.hsl(237F, 1F, 0.08F))) {
+//        drawCircle(
+//            radius = 10f,
+//            brush = Brush.linearGradient(
+//                colors = listOf(Color.Transparent, Color.Cyan),
+//                start = center + Offset(0f, 25f),
+//                end = center + Offset(0f, 10f),
+//                tileMode = TileMode.Decal
+//            ),
+//            center = center + Offset(0f, 20f),
+//        )
+        val landerOffset = Offset(
+            x = state.first.position.first.toFloat(),
+            y = state.first.position.second.toFloat())
+
         scale(20f, -20f) {
             translate(left = size.width/2 - state.first.position.first.toFloat(), top = size.height/2 - state.first.position.second.toFloat()) {
                 state.second.first.zipWithNext { a, b ->
                     drawLine(
-                        color = Color.LightGray,
+                        color = Color.Gray,
                         start = Offset(a.first.toFloat(), a.second.toFloat()),
                         end = Offset(b.first.toFloat(), b.second.toFloat()),
                         strokeWidth = 0.5f,
@@ -114,23 +124,67 @@ fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
 
                 rotate(
                     degrees = -state.first.rotation.toFloat(),
-                    pivot = Offset(x = state.first.position.first.toFloat() + 0.25f, y = state.first.position.second.toFloat() + 0.35f)
+                    pivot = Offset(x = state.first.position.first.toFloat(), y = state.first.position.second.toFloat() + 0.3f)
                 ) {
+                    drawCircle(
+                        color = Color.White,
+                        radius = 0.3f,
+                        style = Stroke(width = 0.1f),
+                        center = Offset(
+                            x = state.first.position.first.toFloat(),
+                            y = state.first.position.second.toFloat() + 0.3f)
+                    )
                     drawRect(
                         color = Color.White,
-                        size = Size(width = 0.5f, height = 0.7f),
+                        size = Size(width = 0.6f, height = 0.2f),
+                        style = Stroke(width = 0.1f),
                         topLeft = Offset(
-                            x = state.first.position.first.toFloat(),
+                            x = state.first.position.first.toFloat() - 0.3f,
                             y = state.first.position.second.toFloat()
+                        )
+                    )
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(
+                            x = state.first.position.first.toFloat() - 0.25f,
+                            y = state.first.position.second.toFloat() + 0.2f
+                        ),
+                        end = Offset(
+                            x = state.first.position.first.toFloat() - 0.4f,
+                            y = state.first.position.second.toFloat() - 0.3f
+                        )
+                    )
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(
+                            x = state.first.position.first.toFloat() + 0.25f,
+                            y = state.first.position.second.toFloat() + 0.2f
+                        ),
+                        end = Offset(
+                            x = state.first.position.first.toFloat() + 0.4f,
+                            y = state.first.position.second.toFloat() - 0.3f
                         )
                     )
                     if (state.second.second > 0.0) {
                         drawCircle(
-                            color = Color.Magenta,
-                            radius = 0.2f,
-                            center = Offset(
-                                x = state.first.position.first.toFloat() + 0.25f,
-                                y = state.first.position.second.toFloat() + 0.0f)
+                            radius = 0.3f,
+                            brush = Brush.linearGradient(
+                                colors = listOf(Color.Cyan, Color.Transparent),
+                                end = landerOffset - Offset(0f, 0.8f),
+                                start = landerOffset - Offset(0f, 0f),
+                                tileMode = TileMode.Decal
+                            ),
+                            center = landerOffset - Offset(0f, 0.5f)
+                        )
+                        drawCircle(
+                            radius = 0.15f,
+                            brush = Brush.linearGradient(
+                                colors = listOf(Color.Cyan, Color.Transparent),
+                                end = landerOffset - Offset(0f, 1f),
+                                start = landerOffset - Offset(0f, 0.2f),
+                                tileMode = TileMode.Decal
+                            ),
+                            center = landerOffset - Offset(0f, 0.7f)
                         )
                     }
                 }

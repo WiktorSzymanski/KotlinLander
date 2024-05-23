@@ -17,5 +17,5 @@ val calcNewVelocity: (Lander, Double, Double) -> Pair<Double, Double> = { lander
 }
 
 val safeLand: (Lander) -> Boolean = {lander ->
-    (abs(lander.velocity.first) < 0.05f || abs(lander.velocity.second) < 0.05f) && abs(lander.rotation) < 3.0f
+    (abs(lander.velocity.first) < 0.02f || abs(lander.velocity.second) < 0.02f) && abs(lander.rotation) < 3.0f
 }
