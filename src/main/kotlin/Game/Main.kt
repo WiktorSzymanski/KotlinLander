@@ -2,6 +2,7 @@ package Game
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Alignment
 import androidx.compose.material.Surface
@@ -11,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
@@ -57,7 +60,11 @@ class Game {
                 if (collision(
                         mutableState.value.second.first.findNearestCoords(mutableState.value.first.position),
                         mutableState.value.first.position)
-                ) break;
+                ) {
+                    println(mutableState.value.first.velocity)
+                    println(if (safeLand(mutableState.value.first)) "Safely landed!" else "Crashed!")
+                    break
+                };
 
                 gravitationalAcceleration = gravitationalAcceleration(lunar.mass, lunar.radius, mutableState.value.first.position.first)
                 val newVelocity = calcNewVelocity(mutableState.value.first, engineTime, gravitationalAcceleration)
@@ -93,16 +100,24 @@ fun KtLander(game: Game) {
 
 @Composable
 fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
-    Canvas(Modifier.fillMaxSize()) {
-
+    Canvas(Modifier.fillMaxSize().background(Color.hsl(237F, 1F, 0.08F))) {
         scale(20f, -20f) {
             translate(left = size.width/2 - state.first.position.first.toFloat(), top = size.height/2 - state.first.position.second.toFloat()) {
+                state.second.first.zipWithNext { a, b ->
+                    drawLine(
+                        color = Color.LightGray,
+                        start = Offset(a.first.toFloat(), a.second.toFloat()),
+                        end = Offset(b.first.toFloat(), b.second.toFloat()),
+                        strokeWidth = 0.5f,
+                        cap = StrokeCap.Round)
+                }
+
                 rotate(
                     degrees = -state.first.rotation.toFloat(),
                     pivot = Offset(x = state.first.position.first.toFloat() + 0.25f, y = state.first.position.second.toFloat() + 0.35f)
                 ) {
                     drawRect(
-                        color = Color.Black,
+                        color = Color.White,
                         size = Size(width = 0.5f, height = 0.7f),
                         topLeft = Offset(
                             x = state.first.position.first.toFloat(),
@@ -118,13 +133,6 @@ fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
                                 y = state.first.position.second.toFloat() + 0.0f)
                         )
                     }
-                }
-
-                state.second.first.zipWithNext { a, b ->
-                    drawLine(
-                        color = Color.Black,
-                        start = Offset(a.first.toFloat(), a.second.toFloat()),
-                        end = Offset(b.first.toFloat(), b.second.toFloat()))
                 }
             }
         }

@@ -26,13 +26,18 @@ val printSurface: (Map<Double, Double>) -> Unit = { coords ->
     }
 }
 
-val collision: (List<Pair<Double, Double>>, Pair<Double, Double>) -> Boolean = {
-    line, point ->
-    val lineDistance = sqrt((line[0].first - line[1].first).pow(2.0) + (line[0].second - line[1].second).pow(2.0))
-    val pointFirstDistance = sqrt((line[0].first - point.first).pow(2.0) + (line[0].second - point.second).pow(2.0))
-    val pointSecondDistance = sqrt((line[1].first - point.first).pow(2.0) + (line[1].second - point.second).pow(2.0))
+val collision: (List<Pair<Double, Double>>, Pair<Double, Double>) -> Boolean = { line, point ->
+    val f = pointsToFunction(line[0], line[1])
+    val lunarY = f(point.first)
 
-    abs(pointFirstDistance + pointSecondDistance - lineDistance) < 0.01 || ( line[0].first > point.first && line[1].first > point.first )
+    lunarY > point.second
+}
+
+val pointsToFunction: (Pair<Double, Double>, Pair<Double, Double>) -> (Double) -> Double = { point1, point2 ->
+    val m = (point2.second - point1.second) / (point2.first - point1.first)
+    val b = point1.second - m * point1.first
+
+    { x: Double -> m * x + b}
 }
 
 fun List<Pair<Double, Double>>.findNearestCoords(point: Pair<Double, Double>): List<Pair<Double, Double>> {
