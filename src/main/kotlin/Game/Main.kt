@@ -6,9 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Alignment
 import androidx.compose.material.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -28,6 +26,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.flow.first
+import kotlin.math.max
 import kotlin.math.pow
 
 @Composable
@@ -54,8 +54,27 @@ class Game {
 
     var rotationToApply: Double = 0.0
 
+    var frameCount = MutableStateFlow(0)
+    var fps = MutableStateFlow(30)
+    var lastTime = MutableStateFlow(System.currentTimeMillis())
+
 
     init {
+        coroutineScope.launch {
+
+            while (true) {
+                val currentTime = System.currentTimeMillis()
+                val elapsedTime = currentTime - lastTime.value
+                fps.value = frameCount.value * 1000 / max(elapsedTime.toInt(), 1)
+//                fps.value = 0
+
+                if (elapsedTime >= 1000) {
+                    frameCount.value = 0
+                    lastTime.value = currentTime
+                }
+                delay(1000)
+            }
+        }
         coroutineScope.launch {
             while (true) {
                 delay(20)
@@ -70,8 +89,9 @@ class Game {
 
 //                gravitationalAcceleration = gravitationalAcceleration(lunar.mass, lunar.radius, mutableState.value.first.position.second)
                 gravitationalAcceleration = -0.00167
-                println(gravitationalAcceleration)
-                val newVelocity = calcNewVelocity(mutableState.value.first, engineTime, gravitationalAcceleration)
+//                println(gravitationalAcceleration)
+                var lFps = max(fps.value, 1)
+                val newVelocity = calcNewVelocity(mutableState.value.first, (engineTime / lFps), gravitationalAcceleration)
                 var newXPosition = (mutableState.value.first.position.first + (newVelocity.first * time)) % maxX
                 if (newXPosition < 0) {
                     newXPosition += maxX
@@ -83,13 +103,15 @@ class Game {
                                 newXPosition,
                                 it.first.position.second + (newVelocity.second * time)
                             ),
-                            rotation = (it.first.rotation + rotationToApply) % 360.0,
+                            rotation = (it.first.rotation + (rotationToApply / lFps)) % 360.0,
                             velocity = newVelocity),
                         Pair(
                             it.second.first,
                             engineTime
                         ))
                 }
+                println("X: ${mutableState.first().first.position.first}")
+                println("Y: ${mutableState.first().first.position.second}")
             }
         }
     }
@@ -101,17 +123,18 @@ fun KtLander(game: Game) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         state.value?.let {
-            Board(it)
+            Board(it) { game.frameCount.value++ }
         }
     }
 }
 
 @Preview
 @Composable
-fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
+fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>, onFrame: () -> Unit) {
     val textMeasurer = rememberTextMeasurer()
     val textVelocityX = "vx: %.2f".format(state.first.velocity.first)
     val textVelocityY = "vx: %.2f".format(state.first.velocity.second)
+//    val textFps = "FPS: $fps"
 
     val style = TextStyle(
         fontSize = 16.sp,
@@ -126,10 +149,20 @@ fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
         textMeasurer.measure(textVelocityY, style)
     }
 
+//    val textLayoutFps = remember(textFps, style) {
+//        textMeasurer.measure(textFps, style)
+//    }
+
     Canvas(Modifier.fillMaxSize().background(Color.hsl(237F, 1F, 0.08F))) {
+        onFrame()
         val landerOffset = Offset(
             x = state.first.position.first.toFloat(),
             y = state.first.position.second.toFloat())
+
+//        drawText(
+//            topLeft = Offset(10f, 10f),
+//            textLayoutResult = textLayoutFps
+//        )
 
         drawText(
             topLeft = Offset(size.width - 100f, 10f),
@@ -225,14 +258,14 @@ fun Board(state: Pair<Lander, Pair<List<Pair<Double, Double>>, Double>>) {
 
 
 fun main() = application {
-    val game = Game()
+    val game = remember { Game() }
     Window(onCloseRequest = ::exitApplication,
         onKeyEvent = {
             when (it.key) {
                 Key.A -> {
                     when (it.type) {
                         KeyEventType.KeyDown -> {
-                            game.rotationToApply = -1.0
+                            game.rotationToApply = -25.0
                         }
                         KeyEventType.KeyUp -> {
                             game.rotationToApply = 0.0
@@ -243,7 +276,7 @@ fun main() = application {
                 Key.D -> {
                     when (it.type) {
                         KeyEventType.KeyDown -> {
-                            game.rotationToApply = 1.0
+                            game.rotationToApply = 25.0
                         }
                         KeyEventType.KeyUp -> {
                             game.rotationToApply = 0.0
@@ -254,7 +287,7 @@ fun main() = application {
                 Key.W -> {
                     when (it.type) {
                         KeyEventType.KeyDown -> {
-                            game.engineTime = 0.05
+                            game.engineTime = 1.0
                         }
                         KeyEventType.KeyUp -> {
                             game.engineTime = 0.0
