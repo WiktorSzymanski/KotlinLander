@@ -39,7 +39,6 @@ enum class ViewState {
     GAME
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun App() {
     var viewState by remember { mutableStateOf(ViewState.INTRO) }
@@ -50,7 +49,6 @@ fun App() {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun IntroView(onStartGame: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
@@ -139,11 +137,13 @@ fun GameView(onBackToIntro: () -> Unit) {
 class Game(onBackToIntro: () -> Unit) {
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
+    var useEngine = false
+    var rotationToApply: Double = 0.0
+
     private val lunar = Lunar(generateSurface(), 1737000.0, 7.34767309 * 10.0.pow(22))
     private var gravitationalAcceleration: Double = -1.67
-    var useEngine = false
-    var landerStatus = LanderStatus.IN_AIR
     private val maxX = lunar.plane.last().first
+    private var landerStatus = LanderStatus.IN_AIR
     private val mutableState = MutableStateFlow(State(
         Lander(position = Pair(100.0, 40.0), rotation = 0.0, enginePower = 70000.0, mass = 14900.0, velocity = Pair(1.0, 0.0)),
         lunar.plane,
@@ -153,11 +153,9 @@ class Game(onBackToIntro: () -> Unit) {
 
     val state: Flow<State> = mutableState
 
-    var rotationToApply: Double = 0.0
-
-    var frameCount = MutableStateFlow(1L)
+    private var frameCount = MutableStateFlow(1L)
     var fps = MutableStateFlow(Long.MAX_VALUE)
-    var lastTime = MutableStateFlow(System.currentTimeMillis())
+    private var lastTime = MutableStateFlow(System.currentTimeMillis())
 
     init {
         coroutineScope.launch {
@@ -218,18 +216,12 @@ class Game(onBackToIntro: () -> Unit) {
 
 @Composable
 fun KtLander(game: Game) {
-    val state = game.state.collectAsState(initial = null)
-
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        state.value?.let {
-            Board(it) { game.frameCount.value++ }
-        }
-    }
+    game.state.collectAsState(initial = null).value?.also { Board(it) }
 }
 
 @Preview
 @Composable
-fun Board(state: State, onFrame: () -> Unit) {
+fun Board(state: State) {
     val textMeasurer = rememberTextMeasurer()
     val textVelocityX = "vx: %.2f".format(state.lander.velocity.first)
     val textVelocityY = "vx: %.2f".format(state.lander.velocity.second)
@@ -269,7 +261,6 @@ fun Board(state: State, onFrame: () -> Unit) {
 
 
     Canvas(Modifier.fillMaxSize().background(Color.hsl(237F, 1F, 0.08F))) {
-//        onFrame()
         val landerOffset = Offset(
             x = state.lander.position.first.toFloat(),
             y = state.lander.position.second.toFloat())
