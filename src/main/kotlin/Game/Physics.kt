@@ -13,12 +13,12 @@ val toRadians: (Double) -> Double = { deg -> deg / 180.0 * PI }
 
 val decomposeAcceleration: (Double, Double) -> Pair<Double, Double> =
     { acceleration, rotation ->
-        Pair(acceleration * cos(toRadians(rotation)), acceleration * sin(toRadians(rotation))) }
+        Pair(acceleration * sin(toRadians(rotation)), acceleration * cos(toRadians(rotation))) }
 
 val accelerationToDeltaVelocity: (Double, Double) -> Double =
     { acceleration, time -> acceleration * time}
 
-val gravitationalAcceleration: (Double, Double, Double) -> Double = /* Nie powinno też być zależne od czasu? */
+val gravitationalAcceleration: (Double, Double, Double) -> Double =
     { mass, radius, height -> - GRAVITATIONAL_CONSTANT * mass / (radius * height).pow(2) }
 
 val applyDeltaVelocity: (Double, Double) -> Double =

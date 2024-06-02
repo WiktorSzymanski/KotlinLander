@@ -2,20 +2,19 @@ package Game
 
 import kotlin.math.abs
 
-val useRocket: (Lander, Double) -> Pair<Double, Double> = { lander, time ->
-    val acceleration = acceleration(lander.mass, lander.enginePower)
-    val deltaVelocity = accelerationToDeltaVelocity(acceleration, time)
-
-    decomposeAcceleration(deltaVelocity, lander.rotation) /* change name of this function */
+val useRocket: (Lander) -> Double = { lander ->
+    acceleration(lander.mass, lander.enginePower)
 }
 
-val calcNewVelocity: (Lander, Double, Double) -> Pair<Double, Double> = { lander, time, gravitationalAcceleration ->
-    val enginesDeltaVelocity = useRocket(lander, time)
+val calcNewVelocity: (Lander, Double, Double, Boolean) -> Pair<Double, Double> = { lander, time, gravitationalAcceleration, useEngine ->
+    val enginesAcceleration = if (useEngine) useRocket(lander) else 0.0
 
-    Pair(applyDeltaVelocity(lander.velocity.first, enginesDeltaVelocity.second),
-        applyDeltaVelocity(lander.velocity.second, gravitationalAcceleration + enginesDeltaVelocity.first))
+    val decomposedEnginesAcceleration = decomposeAcceleration(enginesAcceleration, lander.rotation)
+
+    Pair(applyDeltaVelocity(lander.velocity.first, decomposedEnginesAcceleration.first * time),
+        applyDeltaVelocity(lander.velocity.second, gravitationalAcceleration * time + decomposedEnginesAcceleration.second * time))
 }
 
 val safeLand: (Lander) -> Boolean = {lander ->
-    (abs(lander.velocity.first) < 0.02f || abs(lander.velocity.second) < 0.02f) && abs(lander.rotation) < 3.0f
+    abs(lander.velocity.first) < 2.0f && abs(lander.velocity.second) < 2.0f && abs(lander.rotation) < 5.0f
 }
